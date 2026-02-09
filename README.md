@@ -16,6 +16,13 @@ Implementei o controle de acesso baseado em funções (**RBAC**) utilizando **Su
 ### 2. Automação com n8n
 Desenvolvi os pipelines de dados que conectam o chatbot ao banco de dados via **Webhooks**. 
 
+graph LR
+    A[Interface do Usuário] -->|Webhook| B(n8n Workflow)
+    B --> C{Validação JWT}
+    C -->|Autorizado| D[Consulta Supabase/RAG]
+    D --> E[Processamento IA]
+    E --> F[Resposta Segura]
+
 ### 3. Implementação de RAG Security
 Trabalhei na configuração da técnica **RAG (Retrieval-Augmented Generation)**, assegurando que a IA consumisse apenas fontes de dados oficiais, prevenindo "alucinações" e garantindo respostas precisas.
 
