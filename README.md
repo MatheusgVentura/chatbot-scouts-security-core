@@ -27,10 +27,3 @@ graph LR
     C -->|Autorizado| D[Consulta Supabase/RAG]
     D --> E[Processamento IA]
     E --> F[Resposta Segura]
-
-### 3. Implementação de RAG Security
-Trabalhei na configuração da técnica **RAG (Retrieval-Augmented Generation)**, assegurando que a IA consumisse apenas fontes de dados oficiais, prevenindo "alucinações" e garantindo respostas precisas.
-
-## 🚀 Como visualizar a lógica
-- Os fluxos de automação estão na pasta `/infra`.
-- A estrutura de dados e regras de segurança estão em `/src`.
