@@ -5,25 +5,46 @@ Este repositório destaca a minha contribuição técnica no desenvolvimento de 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
-- **Backend:** Node.js / Python
-- **Automação de Fluxos:** n8n
-- **Banco de Dados & Auth:** Supabase (PostgreSQL) + JWT
-- **Infraestrutura:** Docker & Docker Compose
+- **Auth Provider**: Supabase Auth (BaaS)
+- **Identity**: JSON Web Tokens (JWT)
+- **Middleware & Automação**: n8n logic pipelines
+- **Authorization**: RBAC (Role-Based Access Control)
+- **Infraestrutura**: Docker & Environment Secret Management
 
 ---
 
 ## 🔒 Minhas Contribuições (Destaques Técnicos)
 
-### 1. Arquitetura de Segurança (IAM)
-Implementei o controle de acesso baseado em funções (**RBAC**) utilizando **Supabase Auth** e tokens **JWT**. Isso garantiu que informações sensíveis de membros fossem acessadas apenas por usuários com as permissões corretas.
+### 1. Camada de Auth Guard (JWT Verification)
+- Desenvolvi o Auth Guard centralizado (fluxo auth.guard.final-CORRETO.json) que funciona como a primeira linha de defesa do sistema.
+- Validação de Sessão: Implementei a lógica em JavaScript para extração e validação de tokens Bearer.
+- Integração Cloud: O fluxo comunica-se diretamente com a API do Supabase Auth para verificar a autenticidade da sessão em tempo real.
 
-### 2. Automação com n8n
-Desenvolvi os pipelines de dados que conectam o chatbot ao banco de dados via **Webhooks**. Abaixo está a representação lógica do fluxo de integração:
+### 2. Implementação de RBAC (Controle de Acesso)
+- Em vez de um acesso genérico, estruturei um controle baseado em funções (Roles).
+- Através de lógica condicional no n8n, o sistema valida se o usuário possui a role necessária (Escoteiro ou Gestor) antes de permitir qualquer interação com a base de conhecimento ou dados sensíveis.
+
+### 3. Gestão de Ciclo de Vida de Tokens
+Fui o responsável pela criação dos fluxos de segurança para:
+- Login Seguro: Intermediação entre o cliente e o endpoint de autenticação do Supabase.
+- Refresh Token: Lógica de renovação de credenciais para manter a segurança sem prejudicar a experiência do usuário.
+
+---
+
+### 🏗️ Lógica de Proteção de Dados
+O diagrama abaixo detalha a arquitetura de segurança que projetei:
 
 ```mermaid
-graph LR
-    A[Interface do Usuário] -->|Webhook| B(n8n Workflow)
-    B --> C{Validação JWT}
-    C -->|Autorizado| D[Consulta Supabase/RAG]
-    D --> E[Processamento IA]
-    E --> F[Resposta Segura]
+graph TD
+    A[Requisição Externa] --> B{Auth Guard}
+    B -->|Check Token| C[Supabase Cloud Auth]
+    C -->|Token Válido| D{Validar Role / RBAC}
+    D -->|Permitido| E[Processamento de IA / RAG]
+    D -->|Negado| F[403 Forbidden]
+    C -->|Inexistente| G[401 Unauthorized]
+```
+
+### 📂 Estrutura do Repositório
+- /infra: Contém os fluxos de segurança exportados (JSON) prontos para importação no n8n.
+- /src: Scripts de lógica de segurança, extração de tokens e documentação do fluxo de autorização.
+
