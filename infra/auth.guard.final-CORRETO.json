@@ -1,0 +1,365 @@
+{
+  "name": "auth.guard.final",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "authorization"
+            },
+            {
+              "name": "allowedRoles",
+              "type": "array"
+            },
+            {
+              "name": "body",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -640,
+        112
+      ],
+      "name": "Trigger",
+      "id": "1950aa4d-59f7-472c-b65d-3f84f3b94d46"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($json.authorization || '').trim();\nconst m = raw.match(/^Bearer\\s+(.+)$/i);\nconst token = m ? m[1] : ''; // <-- ajuste aqui\n\nif (!token) {\n  return [{\n    ok: false,\n    status: 401,\n    error_code: 'missing_bearer',\n    msg: 'Missing Authorization: Bearer <token>'\n  }];\n}\n\n// normaliza allowedRoles\nconst rawRoles = $json.allowedRoles;\nconst allowedRoles = Array.isArray(rawRoles) && rawRoles.length\n  ? rawRoles\n  : (typeof rawRoles === 'string' && rawRoles.trim()\n      ? [rawRoles.trim()]\n      : ['Escoteiro','Gestor']);\n\nreturn [{\n  ok: true,\n  token,\n  allowedRoles,\n  body: $json.body ?? null,\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ],
+      "name": "Extract Bearer",
+      "id": "d5a70ed3-a315-4fd2-9d78-06017abc9e54"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.token}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "id": "9e21ae2a-0051-4127-96ab-0be09f2d56ea"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        112
+      ],
+      "name": "Tem Token?",
+      "id": "dfcac52b-c100-4855-82b8-53893ff0d1df"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"ok\": false,\n  \"status\": 401,\n  \"error_code\": \"missing_bearer\",\n  \"msg\": \"Missing Authorization: Bearer <token>\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "name": "401 missing_bearer",
+      "id": "4dad2e6a-2a3f-4504-b4d7-e5092d684fd2"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/auth/v1/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.token}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        208
+      ],
+      "name": "Supabase User",
+      "id": "52ac5f8c-5699-4f11-b351-e86a13ef8ee4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.statusCode}}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "id": "77288de5-2b9e-4b8d-a007-7f26ae756689"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        208
+      ],
+      "name": "Token válido?",
+      "id": "f3ca7440-f583-48c6-ae18-f50861ac85b8"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"ok\": false,\n  \"status\": 401,\n  \"error_code\": \"invalid_token\",\n  \"msg\": \"Invalid or expired access token.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        320
+      ],
+      "name": "401 invalid_or_expired",
+      "id": "9f2508a1-8940-4645-8b3b-1a688213f4f0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- No topo do Check Role ---\nconst user = ($json.body ?? $json);      // resposta do /auth/v1/user\nconst userObj = user.user ?? user;\n\n// Pega o que saiu do node \"Extract Bearer\" (nome EXATO do nó!)\nconst eb = $item(0).$node[\"Extract Bearer\"]?.json || {};\n\n// Mantém o corpo vindo do pai com o MESMO nome usado no projeto\nconst body = eb.body ?? null;\n\n// Normaliza allowedRoles (array, string única, vazio, etc.)\nconst rawRoles = eb.allowedRoles;\nconst allowedRoles = Array.isArray(rawRoles) && rawRoles.length\n  ? rawRoles\n  : (typeof rawRoles === 'string' && rawRoles.trim()\n      ? [rawRoles.trim()]\n      : ['Escoteiro','Gestor']);\n\n// helper p/ comparação robusta\nconst norm = v => String(v ?? '').normalize('NFKC').trim().toLowerCase();\n\n// Role (resiliente)\nlet role =\n  userObj?.user_metadata?.role ??\n  userObj?.app_metadata?.role ??\n  userObj?.identities?.[0]?.identity_data?.role ??\n  'Escoteiro';\nif (typeof role === 'string') role = role.trim();\n\n// ids úteis\nconst user_id = userObj?.id ?? userObj?.user?.id ?? null;\nconst email   = userObj?.email ?? userObj?.user?.email ?? null;\n\n// Checagem com normalização (ex.: \" escoteiro \" == \"Escoteiro\")\nconst isAllowed = allowedRoles.map(norm).includes(norm(role));\n\nif (!isAllowed) {\n  return [{\n    ok: false,\n    status: 403,\n    error_code: 'forbidden_role',\n    msg: 'Role not allowed for this route.',\n    role, user: userObj, user_id, email,\n    body,\n  }];\n}\n\nreturn [{\n  ok: true,\n  status: 200,\n  msg: 'Role permitido.',\n  role, user: userObj, user_id, email,\n  body,\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        128
+      ],
+      "name": "Check Role",
+      "id": "091a70cb-9cf4-42af-b06d-bab73359315c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "c4a705ae-b841-4def-9ea2-5c2065164471"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        128
+      ],
+      "name": "Role permitido?",
+      "id": "4ff284ef-c608-4431-9d69-2c774e725731"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"ok\": false,\n  \"status\": 403,\n  \"error_code\": \"forbidden_role\",\n  \"msg\": \"Role not allowed for this route.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        224
+      ],
+      "name": "403 forbidden_role",
+      "id": "9b82e375-b218-4977-bc86-d652d8218c68"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"ok\": true,\n  \"status\": 200,\n  \"user_id\": \"={{ $json.user.id }}\",\n  \"email\": \"={{ $json.user.email }}\",\n  \"role\": \"={{ $json.role }}\"\n}\n",
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        48
+      ],
+      "name": "200 ok",
+      "id": "736fef61-5730-45fd-8e8c-fe73a4de70a5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Bearer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Bearer": {
+      "main": [
+        [
+          {
+            "node": "Tem Token?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Token?": {
+      "main": [
+        [
+          {
+            "node": "401 missing_bearer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase User": {
+      "main": [
+        [
+          {
+            "node": "Token válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token válido?": {
+      "main": [
+        [
+          {
+            "node": "Check Role",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 invalid_or_expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Role": {
+      "main": [
+        [
+          {
+            "node": "Role permitido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Role permitido?": {
+      "main": [
+        [
+          {
+            "node": "200 ok",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "403 forbidden_role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6b095188-2ec9-4542-8944-e73bcdef3769",
+  "meta": {
+    "instanceId": "afc46daa591288042250b6ae362ce370299a964934bf660e238b73927dc77724"
+  },
+  "id": "xvCecCsfBSOJRWZb",
+  "tags": []
+}

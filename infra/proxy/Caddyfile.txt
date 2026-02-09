@@ -1,0 +1,8 @@
+# Caddyfile - Proxy reverso local para o n8n
+# Quando acessar http://localhost, o Caddy repassa as requisições para o container "n8n" na porta 5678
+# Em produção, basta trocar "http://localhost" por seu domínio (ex.: http://localhost:5678/)
+# e o Caddy gera certificados TLS automaticamente via Let's Encrypt.
+
+http://localhost {
+  reverse_proxy n8n:5678
+}

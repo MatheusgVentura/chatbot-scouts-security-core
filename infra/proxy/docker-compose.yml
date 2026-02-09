@@ -1,0 +1,23 @@
+version: "3.8"
+networks:
+  n8n_net:
+    external: true
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - n8n_net
+
+volumes:
+  caddy_data:
+  caddy_config:

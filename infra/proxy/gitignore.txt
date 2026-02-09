@@ -1,0 +1,29 @@
+# 🧾 Logs do proxy
+
+*.log
+logs/
+access.log
+error.log
+
+# 🔐 Certificados e chaves privadas
+
+*.crt
+*.key
+certificates/
+ssl/
+secrets/
+
+# 💾 Dados temporários e cache
+
+data/
+tmp/
+.cache/
+*.tmp
+*.bak
+
+# ✏️ Arquivos de sistema ou editor
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

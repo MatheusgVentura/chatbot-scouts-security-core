@@ -1,0 +1,228 @@
+{
+  "name": "auth.login.final",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auth/login",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -608,
+        96
+      ],
+      "id": "c1a5d23f-67c1-474c-bd99-52f8a5d8f7b4",
+      "name": "Webhook",
+      "webhookId": "d672f49c-6ec2-46a1-b2cc-3dfb5979c351"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/auth/v1/token?grant_type=password",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_ANON_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"email\": \"{{$json.body.email}}\",\n  \"password\": \"{{$json.body.password}}\"\n}\n",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        96
+      ],
+      "id": "d935c6f6-15ea-4dbe-9c37-0032d40c485a",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7beecdd5-f5f9-44ed-87e6-7c3c66569466",
+              "leftValue": "={{$json.access_token}}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "8f6999d9-2a29-4427-ad9e-370209b6ec08",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        256,
+        0
+      ],
+      "id": "c0241ed8-c959-4060-aff7-1ac5c63c59a6",
+      "name": "Respond 200"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": false,\n  \"status\": 401,\n  \"error_code\": \"invalid_credentials\",\n  \"msg\": \"Email ou senha inválidos.\"\n}\n",
+        "options": {
+          "responseCode": "={{ $json.status || 401 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        128,
+        192
+      ],
+      "id": "e48805c9-324c-43ce-8bf3-a724e6622099",
+      "name": "Respond 401"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a8dcd97a-109c-476b-8292-7868ee8f7055",
+              "name": "access_token",
+              "value": "={{$json.access_token}}",
+              "type": "string"
+            },
+            {
+              "id": "710b835b-249f-465c-88bd-824ea67083e9",
+              "name": "expires_in",
+              "value": "={{$json.expires_in}}",
+              "type": "number"
+            },
+            {
+              "id": "20d7803a-8976-4fd8-ae04-07af0b32ac0d",
+              "name": "token_type",
+              "value": "={{$json.token_type}}",
+              "type": "string"
+            },
+            {
+              "id": "4310536a-0de6-4e71-8c08-865d0e98209c",
+              "name": "refresh_token",
+              "value": "={{$json.refresh_token}}",
+              "type": "string"
+            },
+            {
+              "id": "e1cf74a2-08d3-4c75-b9e1-8d804624a79e",
+              "name": "user_id",
+              "value": "={{$json.user.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "62488cc5-0863-498f-afd2-03dd48a48555",
+      "name": "Set"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b6716f5e-9359-40b3-a291-c51462395404",
+  "meta": {
+    "instanceId": "afc46daa591288042250b6ae362ce370299a964934bf660e238b73927dc77724"
+  },
+  "id": "ALuvXXNFImx60yOg",
+  "tags": []
+}

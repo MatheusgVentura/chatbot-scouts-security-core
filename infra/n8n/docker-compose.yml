@@ -1,0 +1,20 @@
+version: "3.8"
+networks:
+  n8n_net:
+    name: n8n_net   
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    env_file: .env
+    ports:
+      - "${N8N_PORT}:5678"   
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    networks:
+      - n8n_net
+
+volumes:
+  n8n_data:

@@ -1,0 +1,354 @@
+{
+  "name": "qa.ask.protection.final",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "qa/ask",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook Ask",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        112
+      ],
+      "id": "a1a2aa55-0a13-4b7b-bb63-64b453b1eea7",
+      "webhookId": "aa514b3d-95c3-4e96-8a96-f9d4a30fa00f"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Monta entrada para o guard\nconst headers = $json.headers || $headers || {};\nreturn [{\n  authorization: headers.authorization || headers.Authorization || '',\n  allowedRoles: ['Escoteiro','Gestor'],\n  body: $json.body || $json\n}];"
+      },
+      "name": "Montar entrada guard",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        112
+      ],
+      "id": "fdf039d0-37df-4ece-a869-728cf9236116"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "xvCecCsfBSOJRWZb",
+          "mode": "list",
+          "cachedResultName": "auth.guard.final"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "authorization": "={{ $json.headers?.authorization || $json.headers?.Authorization || $json.authorization || \"\" }}",
+            "allowedRoles": "={{ Array.isArray($json.allowedRoles) && $json.allowedRoles.length\n    ? $json.allowedRoles\n    : [\"Escoteiro\",\"Gestor\"] }}",
+            "body": "={{ $json.body || $json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "authorization",
+              "displayName": "authorization",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "allowedRoles",
+              "displayName": "allowedRoles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Execute auth.guard",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        112
+      ],
+      "id": "43adb7e5-a65a-4038-a8eb-acc9b09da2ce",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        112
+      ],
+      "id": "72037ceb-a004-420d-9d17-af0eb4c5a8d3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    ok: false,\n    status: $json.status || 400,\n    error_code: $json.error_code || 'unknown_error',\n    msg: $json.msg || 'Erro ao processar a solicitação'\n  }\n}}",
+        "options": {
+          "responseCode": "={{$json.status || 400}}"
+        }
+      },
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ],
+      "id": "b712a7cc-db27-479b-b190-950ad725ba4e"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validação robusta da pergunta (funciona com ou sem auth.guard)\n\n// 0) preserva tudo que veio antes (user/role/body/etc.)\nconst prev = $json;\n\n// 1) De onde ler o payload\nconst p =\n  prev.payload ??       // quando veio do auth.guard (payload anexado)\n  prev.body ??          // quando veio direto do webhook\n  prev;                 // fallback\n\n// 2) Pega a pergunta em vários formatos comuns\nconst q = (\n  p.question ??\n  p.body?.question ??   // se o caller mandou { body: { question } }\n  p.q ??                // alias curto\n  p.body?.q ??          // alias curto dentro de body\n  ''\n);\n\n// 3) Normaliza\nconst question = String(q).trim();\nconst MIN = 5;\n\n// 4) Regras + retorno padronizado\nif (!question) {\n  return [{\n    ...prev,\n    ok: false,\n    status: 400,\n    error_code: 'invalid_input',\n    msg: 'missing question'\n  }];\n}\n\nif (question.length < MIN) {\n  return [{\n    ...prev,\n    ok: false,\n    status: 400,\n    error_code: 'invalid_input',\n    msg: 'question too short'\n  }];\n}\n\n// 5) Sucesso — mantém contexto anterior\nreturn [{\n  ...prev,\n  ok: true,\n  status: 200,\n  question\n}];"
+      },
+      "name": "Validar pergunta",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "11bbdb78-6b6f-4f0e-bbed-8710fced9098"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "answer",
+              "value": "Pergunta recebida com sucesso (mock)."
+            },
+            {
+              "name": "userId",
+              "value": "=={{ $json.user?.id || $json.user_id }}"
+            },
+            {
+              "name": "role",
+              "value": "={{$json.role}}"
+            },
+            {
+              "name": "question",
+              "value": "={{$json.question}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Build Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "b0ea9fdc-20d3-4f83-88e4-1d56be7714fd"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"user_id\": \"={{ $json.userId }}\",\n  \"role\": \"={{ $json.role }}\",\n  \"question\": \"={{ $json.question }}\",\n  \"answer\": \"={{ $json.answer }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "127ed2cb-aff2-4161-b790-809b31ed7e33"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "be67b41b-f8e3-4ee4-8aa2-b59502b87fb9",
+              "leftValue": "={{$json.ok}}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "89dce45e-1885-4f12-b25b-a9047d143af0",
+      "name": "Pergunta OK?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": false,\n  \"status\": \"={{$json.status || 400}}\",\n  \"error_code\": \"={{$json.error_code || 'invalid_input'}}\",\n  \"msg\": \"={{$json.msg || 'Invalid request.'}}\"\n}\n",
+        "options": {
+          "responseCode": "={{$json.status || 400}}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        80
+      ],
+      "id": "40017b3d-881c-4683-9b7c-1d4b1d5093ec",
+      "name": "Respond 400"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Ask": {
+      "main": [
+        [
+          {
+            "node": "Montar entrada guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar entrada guard": {
+      "main": [
+        [
+          {
+            "node": "Execute auth.guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute auth.guard": {
+      "main": [
+        [
+          {
+            "node": "Autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Validar pergunta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar pergunta": {
+      "main": [
+        [
+          {
+            "node": "Pergunta OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pergunta OK?": {
+      "main": [
+        [
+          {
+            "node": "Build Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0a940861-d4f9-4933-85e0-8b7b2f1871bd",
+  "meta": {
+    "instanceId": "afc46daa591288042250b6ae362ce370299a964934bf660e238b73927dc77724"
+  },
+  "id": "b8k63S4ivejiS8yA",
+  "tags": []
+}

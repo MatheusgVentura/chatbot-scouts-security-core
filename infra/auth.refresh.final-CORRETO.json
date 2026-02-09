@@ -1,0 +1,327 @@
+{
+  "name": "auth.refresh.final",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auth/refresh",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        -96
+      ],
+      "id": "0d65657d-e4c3-4de4-b0ef-b2298034231d",
+      "name": "Webhook",
+      "webhookId": "f50015b1-7095-4cdd-9632-61222ee3e489"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/auth/v1/token?grant_type=refresh_token",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_ANON_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"refresh_token\": \"{{ $json.refresh_token || $json.body?.refresh_token }}\" }",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        -80
+      ],
+      "id": "626bae20-0a89-4435-8e8d-5ec6ccd7ff9c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d121e5c3-b938-48d3-9454-b29f19fe45c8",
+              "leftValue": "={{$json.access_token}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -80
+      ],
+      "id": "d78ad4f7-ec2e-4527-a583-eb47a25d358c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1040,
+        -176
+      ],
+      "id": "7d1d9e51-f91e-49d0-9e16-d0f254d2ce46",
+      "name": "Respond 200"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": false,\n  \"status\": 401,\n  \"error_code\": \"invalid_refresh\",\n  \"msg\": \"Refresh token inválido ou expirado.\"\n}\n",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        848,
+        0
+      ],
+      "id": "1219d72c-7614-4350-8bda-9364b6873e42",
+      "name": "Respond 401"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "16572698-2ada-448a-8b40-2fda9d3d60f2",
+              "name": "access_token",
+              "value": "={{$json.access_token}}",
+              "type": "string"
+            },
+            {
+              "id": "30bd1f2b-d9a2-4eb8-ae58-d84a7bb9bcdd",
+              "name": "expires_in",
+              "value": "={{$json.expires_in}}",
+              "type": "number"
+            },
+            {
+              "id": "0c65d32c-070d-4d05-a386-cd13f1151668",
+              "name": "token_type",
+              "value": "={{$json.token_type}}",
+              "type": "string"
+            },
+            {
+              "id": "ee5e516a-f88f-429e-9a1a-146aa24ea4a9",
+              "name": "refresh_token",
+              "value": "={{$json.refresh_token}}",
+              "type": "string"
+            },
+            {
+              "id": "4197d582-112f-4017-945e-74a3ed3fec42",
+              "name": "user_id",
+              "value": "={{$json.user.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        -176
+      ],
+      "id": "da283f41-2155-47a0-bac3-86326b9c0709",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Captura o refresh_token tanto no root quanto no body\nconst rt =\n  $json.refresh_token ??\n  $json.body?.refresh_token ??\n  $json.query?.refresh_token ??\n  '';\n\n// Se estiver vazio, marca como _missing\nif (!rt || typeof rt !== 'string' || rt.trim() === '') {\n  return [{ json: { _missing: true } }];\n}\n\n// Retorna padronizado para os próximos nós\nreturn [{ json: { refresh_token: rt.trim() } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -96
+      ],
+      "id": "00150256-8ba9-4afc-9bf0-aa99cf1a6085",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fc3f84dd-59fb-41f7-8018-70a80958d4de",
+              "leftValue": "={{ $json._missing === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        -96
+      ],
+      "id": "3efd4789-94fd-48a3-8f3f-359192d9639f",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": false,\n  \"status\": 400,\n  \"error_code\": \"missing_fields\",\n  \"msg\": \"Informe o refresh_token no body.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        464,
+        -240
+      ],
+      "id": "dbce7690-9cc8-4a95-949f-c5f4c74d4634",
+      "name": "Respond 400"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond 401": {
+      "main": [
+        []
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "75594b25-eb53-47cf-afa0-dcb1c7d1c494",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "afc46daa591288042250b6ae362ce370299a964934bf660e238b73927dc77724"
+  },
+  "id": "GMmPTYpHs00xhzzE",
+  "tags": []
+}

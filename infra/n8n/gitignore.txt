@@ -1,0 +1,30 @@
+# 🔐 Variáveis de ambiente
+# Nunca versionar o .env com chaves e senhas
+.env
+
+# 💾 Dados persistentes do n8n
+
+n8n_data/
+data/
+backups/
+
+# 🧾 Logs e arquivos temporários
+
+*.log
+*.tmp
+*.bak
+
+# ⚙️ Arquivos de sistema ou editor
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker temporários
+
+.cache/
+tmp/
+*.pid
+*.tar
+*.gz
