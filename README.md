@@ -1,6 +1,6 @@
 # 🤖 Chatbot Scouts - Security & Integration Core
 
-Este repositório destaca a minha contribuição técnica no desenvolvimento de um chatbot inteligente para a União dos Escoteiros do Brasil. Meu foco foi garantir a **integridade dos dados** e a **automação segura** entre a interface e o banco institucional.
+Este repositório destaca a minha contribuição técnica no desenvolvimento de um chatbot inteligente para a União dos Escoteiros do Brasil. Meu foco foi a arquitetura de Backend, garantindo a integridade dos dados e a automação segura através de um sistema robusto de autenticação e integração via n8n
 
 ---
 
