@@ -45,6 +45,6 @@ graph TD
 ```
 
 ### 📂 Estrutura do Repositório
-- /infra: Contém os fluxos de segurança exportados (JSON) prontos para importação no n8n.
-- /src: Scripts de lógica de segurança, extração de tokens e documentação do fluxo de autorização.
+- **/infra**: Contém os fluxos de segurança exportados (JSON) prontos para importação no n8n.
+- **/src**: Scripts de lógica de segurança, extração de tokens e documentação do fluxo de autorização.
 
